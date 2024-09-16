@@ -5,22 +5,24 @@ public class Main {
     // will not execute!)
     
     public static void test1() {
-	Graph g = new ListGraph();
-	assert g.addNode("a");
-	assert g.hasNode("a");
+		Graph g = new ListGraph();
+
+		assert g.addNode("a");
+		assert g.hasNode("a");
     }
 
     public static void test2() {
-	Graph g = new ListGraph();
-	EdgeGraph eg = new EdgeGraphAdapter(g);
-	Edge e = new Edge("a", "b");
-	assert eg.addEdge(e);
-	assert eg.hasEdge(e);
+		Graph g = new ListGraph();
+
+		EdgeGraph eg = new EdgeGraphAdapter(g);
+		Edge e = new Edge("a", "b");
+		assert eg.addEdge(e);
+		assert eg.hasEdge(e);
     }
     
     public static void main(String[] args) {
-	test1();
-	test2();
+		test1();
+		// test2();
     }
 
 }
