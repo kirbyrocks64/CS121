@@ -9,6 +9,16 @@ public class Main {
 
 		assert g.addNode("a");
 		assert g.hasNode("a");
+		assert g.addNode("b");
+		assert g.hasNode("b");
+		assert g.addNode("c");
+		assert g.hasNode("c");
+
+		assert g.addEdge("a", "b");
+		assert g.addEdge("b", "a");
+		assert g.addEdge("b", "c");
+		
+		assert g.connected("a", "c");
     }
 
     public static void test2() {
