@@ -42,6 +42,11 @@ public class ListGraph implements Graph {
             return false;
         }
         nodes.remove(n);
+        for (String node : nodes.keySet()) {
+            if (nodes.get(node).contains(n)) {
+                nodes.get(node).remove(n);
+            }
+        }
         return true;
     }
 
