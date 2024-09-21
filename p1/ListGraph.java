@@ -12,6 +12,9 @@ public class ListGraph implements Graph {
     }
 
     public boolean addEdge(String n1, String n2) {
+        if (!nodes.containsKey(n1) || !nodes.containsKey(n2)) {
+            throw new NoSuchElementException();
+        }
 	    if (nodes.get(n1).contains(n2)) {
             return false;
         }
@@ -28,10 +31,10 @@ public class ListGraph implements Graph {
     }
 
     public boolean hasEdge(String n1, String n2) {
-	    if (nodes.get(n1).contains(n2)) {
-            return true;
+	    if (!nodes.containsKey(n1) || !nodes.get(n1).contains(n2)) {
+            return false;
         }
-        return false;
+        return true;
     }
 
     public boolean removeNode(String n) {
@@ -98,12 +101,16 @@ public class ListGraph implements Graph {
         }
 
         for (String s : newGraph.nodes()) {
-            for (String s1 : nodes.get(s)) {
-                newGraph.addEdge(s, s1);
+            if (nodes.containsKey(s)) {
+                for (String s1 : nodes.get(s)) {
+                    newGraph.addEdge(s, s1);
+                }
             }
-            for (String s2 : g.succ(s)) {
-                if (!newGraph.hasEdge(s, s2)) {
-                    newGraph.addEdge(s, s2);
+            if (g.hasNode(s)) {
+                for (String s2 : g.succ(s)) {
+                    if (!newGraph.hasEdge(s, s2)) {
+                        newGraph.addEdge(s, s2);
+                    }
                 }
             }
         }
