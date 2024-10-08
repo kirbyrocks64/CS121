@@ -1,19 +1,31 @@
 import java.util.*;
 
 abstract public class Piece {
+    private static final HashMap<Character, PieceFactory> pieceMap = 
+        new HashMap<>();
+    private static Color color;
+
     public static void registerPiece(PieceFactory pf) {
-	throw new UnsupportedOperationException();
+	    char pieceSymbol = pf.symbol();
+        pieceMap.put(pieceSymbol, pf);
     }
 
     public static Piece createPiece(String name) {
-	throw new UnsupportedOperationException();
+        char charColor = name.charAt(0);
+        if (charColor == 'b') {
+            color = Color.BLACK;
+        } else {
+            color = Color.WHITE;
+        }
+
+        char symbol = name.charAt(1);
+	    PieceFactory pf = pieceMap.get(symbol);
+
+        return pf.create(color);
     }
 
     public Color color() {
-	// You should write code here and just inherit it in
-	// subclasses. For this to work, you should know
-	// that subclasses can access superclass fields.
-	throw new UnsupportedOperationException();
+        return color;
     }
 
     abstract public String toString();

@@ -1,11 +1,13 @@
 import java.util.*;
 
 public class Queen extends Piece {
-    public Queen(Color c) { throw new UnsupportedOperationException(); }
-    // implement appropriate methods
+    private final Color color;
+
+    public Queen(Color c) { this.color = c; }
 
     public String toString() {
-	throw new UnsupportedOperationException();
+	    if (this.color == Color.BLACK) { return "bq"; } 
+        return "wq";
     }
 
     public List<String> moves(Board b, String loc) {
