@@ -16,8 +16,10 @@ abstract public class Piece {
         char charColor = name.charAt(0);
         if (charColor == 'b') {
             color = Color.BLACK;
-        } else {
+        } else if (charColor == 'w') {
             color = Color.WHITE;
+        } else {
+            throw new IllegalArgumentException("Invalid color");
         }
 
         char symbol = name.charAt(1);
@@ -35,15 +37,14 @@ abstract public class Piece {
     abstract public List<String> moves(Board b, String loc);
 
     public boolean stringInRange(String loc) {
-        boolean result = false;
         for (int i = 0; i < cols.length; i++) {
             if (cols[i] == loc.charAt(0)) { 
                 for (int j = 0; j < rows.length; j++) {
-                    if (rows[j] == loc.charAt(1)) { result = true; }
+                    if (rows[j] == loc.charAt(1)) { return true; }
                 }
             }
         }
-        return result;
+        return false;
     }
 
     public boolean charInRange(char loc) {

@@ -13,7 +13,7 @@ public class Board {
     
     public static Board theBoard() {
         if (board == null) {
-            return new Board();
+            board = new Board();
         }
 	    return board;
     }
@@ -55,8 +55,10 @@ public class Board {
         for (String move : piece.moves(board, from)) {
             if (move.equals(to)) {
                 goodMove = true;
+                
             }
         }
+        System.out.println("Moving " + piece.toString() + " from " + from + " to " + to);
         if (!goodMove) {
             throw new IllegalArgumentException
                 ("Cannot movePiece; move is illegal");

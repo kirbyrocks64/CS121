@@ -23,12 +23,9 @@ public class Chess {
 
     /* ------------ Reads layout file ------------ */
     File layoutFile = new File(args[0]);
-    if (!layoutFile.exists()) {
-        throw new IllegalArgumentException("Layout file does not exist");
-    }
     
-    try (BufferedReader layoutReader = 
-        new BufferedReader(new FileReader(layoutFile))) {
+    try {
+        BufferedReader layoutReader = new BufferedReader(new FileReader(layoutFile));
 
         String layoutLine;
         while ((layoutLine = layoutReader.readLine()) != null) {
@@ -71,8 +68,7 @@ public class Chess {
             }
             Board.theBoard().addPiece(newPiece, loc);
         }
-        
-    } catch (IOException e) {
+    } catch (Exception e) {
         e.printStackTrace();
     }
 
