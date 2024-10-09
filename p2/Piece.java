@@ -4,6 +4,8 @@ abstract public class Piece {
     private static final HashMap<Character, PieceFactory> pieceMap = 
         new HashMap<>();
     private static Color color;
+    private static char[] cols = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+    private static char[] rows = {'8', '7', '6', '5', '4', '3', '2', '1'};
 
     public static void registerPiece(PieceFactory pf) {
 	    char pieceSymbol = pf.symbol();
@@ -31,4 +33,26 @@ abstract public class Piece {
     abstract public String toString();
 
     abstract public List<String> moves(Board b, String loc);
+
+    public boolean stringInRange(String loc) {
+        boolean result = false;
+        for (int i = 0; i < cols.length; i++) {
+            if (cols[i] == loc.charAt(0)) { 
+                for (int j = 0; j < rows.length; j++) {
+                    if (rows[j] == loc.charAt(1)) { result = true; }
+                }
+            }
+        }
+        return result;
+    }
+
+    public boolean charInRange(char loc) {
+        for (int i = 0; i < cols.length; i++) {
+            if (cols[i] == loc) { return true; }
+        }
+        for (int i = 0; i < rows.length; i++) {
+            if (rows[i] == loc) { return true; }
+        }
+        return false;
+    }
 }

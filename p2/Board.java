@@ -1,8 +1,11 @@
+import java.util.*;
+
 public class Board {
 
     private Piece[][] pieces = new Piece[8][8];
     private static char[] cols = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
     private static char[] rows = {'8', '7', '6', '5', '4', '3', '2', '1'};
+    private final List<BoardListener> listeners = new ArrayList<>();
 
     private static Board board;
 
@@ -59,6 +62,17 @@ public class Board {
                 ("Cannot movePiece; move is illegal");
         }
 
+        for (int i = 0; i < listeners.size(); i++) {
+            listeners.get(i).onMove(from, to, piece);
+        }
+
+        if (Board.theBoard().getPiece(to) != null) {
+            for (int i = 0; i < listeners.size(); i++) {
+                listeners.get(i).onCapture(piece, 
+                                           Board.theBoard().getPiece(to));
+            }
+        }
+
         pieces[startRow][startCol] = null;
         pieces[endRow][endCol] = piece;
     }
@@ -72,19 +86,25 @@ public class Board {
     }
 
     public void registerListener(BoardListener bl) {
-	throw new UnsupportedOperationException();
+	    listeners.add(bl);
     }
 
     public void removeListener(BoardListener bl) {
-	throw new UnsupportedOperationException();
+	    listeners.remove(bl);
     }
 
     public void removeAllListeners() {
-	throw new UnsupportedOperationException();
+	    listeners.clear();
     }
 
     public void iterate(BoardInternalIterator bi) {
-	throw new UnsupportedOperationException();
+	    for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                String loc = "" + cols[j] + rows[i];
+                Piece piece = Board.theBoard().getPiece(loc);
+                bi.visit(loc, piece);
+            }
+        }
     }
 
     private int convertCol(char col) {

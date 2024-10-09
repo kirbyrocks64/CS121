@@ -11,6 +11,11 @@ public class Test {
         b.addPiece(p, "a3");
         assert b.getPiece("a3") == p;
     }
+
+    public static void test_misc() {
+        char i = '5' + 1;
+        System.out.println(i);
+    }
     
     public static void main(String[] args) {
         test_pawn_create();
