@@ -110,6 +110,8 @@ public class Unit {
     }
 
     public static Map<String, Object[]> quickCheckClass(String name) {
-	throw new UnsupportedOperationException();
+	    Map<String, Object[]> results = new HashMap<>();
+
+        return results;
     }
 }
