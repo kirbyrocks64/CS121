@@ -112,6 +112,80 @@ public class Unit {
     public static Map<String, Object[]> quickCheckClass(String name) {
 	    Map<String, Object[]> results = new HashMap<>();
 
+        Class<?> testClassFramework = null;
+        Object testClass = null;
+        try {
+            testClassFramework = Class.forName(name);
+            testClass = testClassFramework.getDeclaredConstructor().newInstance();
+        } catch (ClassNotFoundException e) {
+            System.out.println("Class matching name not found.");
+            e.printStackTrace();
+            throw new RuntimeException();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException();
+        }
+
+        if (testClassFramework == null || testClass == null) {
+            System.out.println("Class could not be loaded.");
+            throw new NullPointerException();
+        }
+
+        Method[] testMethods = testClassFramework.getMethods();
+        Arrays.sort(testMethods, Comparator.comparing(Method::getName));
+
+        for (Method testMethod : testMethods) {
+            if (testMethod.isAnnotationPresent(Property.class)) {
+                Object[] testResult = null;
+                Type[] inputTypes = testMethod.getGenericParameterTypes();
+                Annotation[][] inputAnnotations = testMethod.getParameterAnnotations();
+
+                for (int i = 0; i < inputTypes.length; i++) {
+                    if (inputAnnotations[i].length != 1) {
+                        System.out.println("Property " + testMethod.getName() + " has argument with incorrect number of annotations");
+                        throw new RuntimeException();
+                    }
+
+                    if (inputTypes[i].equals(Integer.class) && !inputAnnotations[i][0].equals(IntRange.class)) {
+                        
+                    } else if (inputTypes[i].equals(String.class) && !inputAnnotations[i][0].equals(StringSet.class)) {
+
+                    } else if (inputTypes[i].equals(List.class) && !inputAnnotations[i][0].equals(ListLength.class)) {
+
+                    } else if (inputTypes[i].equals(Object.class)) {
+
+                    } else {
+                        System.out.println("Property " + testMethod.getName() + " has argument with unsupported type");
+                        throw new RuntimeException();
+                    }
+                }
+
+                try {
+                    if ()
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException();
+                }
+                
+                results.put(testMethod.getName(), testResult);
+            }
+        }
+
         return results;
+    }
+
+    private boolean checkValidParameters(Type type, Annotation annotation) {
+        if (type.equals(Integer.class) && !annotation.annotationType().equals(IntRange.class)) {
+                        
+        } else if (type.equals(String.class) && !annotation.annotationType().equals(StringSet.class)) {
+
+        } else if (type.equals(List.class) && !annotation.annotationType().equals(ListLength.class)) {
+
+        } else if (type.equals(Object.class) && !annotation.annotationType().equals(ForAll.class)) {
+
+        }
+            /* System.out.println("Property " + testMethod.getName() + " has argument with unsupported type");
+            throw new RuntimeException(); */
+        return false;
     }
 }
