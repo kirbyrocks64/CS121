@@ -1,6 +1,6 @@
+import java.lang.annotation.*;
 import java.lang.reflect.*;
 import java.util.*;
-import java.lang.annotation.*;
 
 public class Unit {
     public static Map<String, Throwable> testClass(String name) {
@@ -12,16 +12,16 @@ public class Unit {
             testClassFramework = Class.forName(name);
             testClass = testClassFramework.getDeclaredConstructor().newInstance();
         } catch (ClassNotFoundException e) {
-            System.out.println("Class matching name not found");
+            System.out.println("Class matching name not found.");
             e.printStackTrace();
-            throw new RuntimeException();,
+            throw new RuntimeException();
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException();
         }
 
         if (testClassFramework == null || testClass == null) {
-            System.out.println("No methods to display as the class could not be loaded.");
+            System.out.println("Class could not be loaded.");
             throw new NullPointerException();
         }
 
