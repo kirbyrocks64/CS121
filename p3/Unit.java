@@ -77,7 +77,7 @@ public class Unit {
                 try {
                     testMethod.invoke(testClass);
                 } catch (Exception e) {
-                    testResult = e;
+                    testResult = e.getCause();
                 }
                 
                 results.put(testMethod.getName(), testResult);
@@ -113,6 +113,7 @@ public class Unit {
     }
 
     public static Map<String, Object[]> quickCheckClass(String name) {
+        System.out.println("Started function");
 	    Map<String, Object[]> results = new HashMap<>();
 
         Class<?> testClassFramework = null;
@@ -134,6 +135,8 @@ public class Unit {
             throw new NullPointerException();
         }
 
+        System.out.println("Loaded class");
+
         Method[] testMethods = testClassFramework.getMethods();
         Arrays.sort(testMethods, Comparator.comparing(Method::getName));
 
@@ -141,11 +144,17 @@ public class Unit {
             if (testMethod.isAnnotationPresent(Property.class)) {
                 Type[] inputTypes = testMethod.getGenericParameterTypes();
                 Annotation[][] inputAnnotations = testMethod.getParameterAnnotations();
+
+                System.out.println("got parameters");
+
                 for (int i = 0; i < inputTypes.length; i++) {
                     if (!checkValidParameters(inputTypes[i], inputAnnotations[i], i)) {
                         System.out.println("Property " + testMethod.getName() + " has an invalid parameter.");
+                        /* throw new InvalidParameterException(); */
                     }
                 }
+
+                System.out.println("checked annotations");
 
                 List<List<Object>> argumentPossibilities = generateArgumentPossibilities(testMethod, testClass);
                 for (List<Object> listArgs : argumentPossibilities) {
@@ -169,6 +178,7 @@ public class Unit {
     }
 
     private static boolean checkValidParameters(Type type, Annotation[] annotations, int numAnnotation) {
+        System.out.println("poop");
         if (type.equals(Integer.class)) {
             if (annotations.length != 1) {
                 System.out.println("Integer argument has incorrect number of annotations");
@@ -198,7 +208,7 @@ public class Unit {
             if (!annotations[numAnnotation].annotationType().equals(ForAll.class)) {
                 System.out.println("Object parameter can only have @ForAll annotation.");
                 throw new InvalidParameterException();
-            }
+            } return true;
         }
 
         return false;
