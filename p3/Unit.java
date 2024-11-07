@@ -2,6 +2,8 @@ import java.lang.annotation.*;
 import java.lang.reflect.*;
 import java.security.InvalidParameterException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Unit {
     public static Map<String, Throwable> testClass(String name) {
@@ -137,37 +139,29 @@ public class Unit {
 
         for (Method testMethod : testMethods) {
             if (testMethod.isAnnotationPresent(Property.class)) {
-                Object[] testResult = null;
                 Type[] inputTypes = testMethod.getGenericParameterTypes();
                 Annotation[][] inputAnnotations = testMethod.getParameterAnnotations();
-
                 for (int i = 0; i < inputTypes.length; i++) {
                     if (!checkValidParameters(inputTypes[i], inputAnnotations[i], i)) {
                         System.out.println("Property " + testMethod.getName() + " has an invalid parameter.");
                     }
                 }
 
-                Parameter[] parameters = testMethod.getParameters();
-                List<List<Object>> argumentCombinations = new ArrayList<>();
-                for (int i = 0; i < parameters.length; i++) {
-                    generateArgumentCombinations(parameters[i], argumentCombinations.get(i));
-                }
-
-                /* List<List<Object>> argumentCombinations = generateArgumentCombinations(testMethod, testClass); */
-
-                for (List<Object> args : argumentCombinations) {
-                    Object[] argsArray = args.toArray();
+                List<List<Object>> argumentPossibilities = generateArgumentPossibilities(testMethod, testClass);
+                for (List<Object> listArgs : argumentPossibilities) {
+                    Object[] args = listArgs.toArray();
                     try {
-                        boolean result = (boolean) testMethod.invoke(testClass, argsArray);
+                        boolean result = (boolean) testMethod.invoke(testClass, args);
                         if (!result) {
-                            results.put(testMethod.getName(), argsArray);
+                            results.put(testMethod.getName(), args);
+                            break;
                         }
-                    } catch (Throwable t) {
-                        results.put(testMethod.getName(), argsArray);
+                    } catch (Exception e) {
+                        results.put(testMethod.getName(), args);
+                        break;
                     }
                 }
-                
-                results.put(testMethod.getName(), testResult);
+                results.putIfAbsent(testMethod.getName(), null);
             }
         }
 
@@ -210,34 +204,161 @@ public class Unit {
         return false;
     }
 
-    private static List<List<Object>> generateArgumentCombinations(Parameter parameter, List<Object> inputsList) {
-        Annotation[] annotations = parameter.getAnnotations();
-        Annotation annotation = annotations[0];
+    private static List<List<Object>> generateArgumentPossibilities(Method method, Object instance) {
+        List<List<Object>> argsPerParameter = new ArrayList<>();
 
-        if (annotation instanceof IntRange) {
-            IntRange range = (IntRange) annotation;
-            for (int i = range.min(); i <= range.max(); i++) {
-                inputsList.add(i);
+        for (Parameter parameter : method.getParameters()) {
+            List<Object> args = new ArrayList<>();
+
+            if (parameter.isAnnotationPresent(IntRange.class)) {
+                IntRange range = parameter.getAnnotation(IntRange.class);
+                for (int i = range.min(); i <= range.max(); i++) {
+                    args.add(i);
+                }
+            } else if (parameter.isAnnotationPresent(StringSet.class)) {
+                StringSet set = parameter.getAnnotation(StringSet.class);
+                args.addAll(Arrays.asList(set.strings()));
+            } else if (parameter.isAnnotationPresent(ListLength.class)) {
+                ListLength listLength = parameter.getAnnotation(ListLength.class);
+                AnnotatedType[] annotations = ((AnnotatedParameterizedType) parameter.getAnnotatedType()).getAnnotatedActualTypeArguments();
+                AnnotatedType annotationSingle = annotations[0];
+                Annotation annotationType = annotationSingle.getAnnotations()[0];
+
+                for (int i = listLength.min(); i <= listLength.max(); i++) {
+                    if (annotationType instanceof IntRange) {
+                        IntRange range = annotationSingle.getAnnotation(IntRange.class);
+                        List<Object> intList = IntStream.rangeClosed(range.min(), range.max())
+                                                        .boxed()
+                                                        .collect(Collectors.toList());
+                        args.addAll(createAllListsOfSize(intList, i));
+                    } else if (annotationType instanceof StringSet) {
+                        StringSet set = annotationSingle.getAnnotation(StringSet.class);
+                        List<Object> stringList = Arrays.asList(set.strings());
+                        args.addAll(createAllListsOfSize(stringList, i));
+                    } else if (annotationType instanceof ListLength) {
+                        AnnotatedParameterizedType parameterizedType = (AnnotatedParameterizedType) annotationSingle;
+                        Annotation nestedListType = parameterizedType.getAnnotatedActualTypeArguments()[0].getAnnotations()[0];
+                        List<List<Object>> listOfLists = new ArrayList<>();
+
+                        if (nestedListType instanceof IntRange) {
+                            IntRange innerRange = (IntRange) nestedListType;
+                            for (int innerValue = innerRange.min(); innerValue <= innerRange.max(); innerValue++) {
+                                listOfLists.add(Collections.singletonList(innerValue));
+                            }
+                        } else if (nestedListType instanceof StringSet) {
+                            StringSet innerSet = (StringSet) nestedListType;
+                            for (String str : innerSet.strings()) {
+                                listOfLists.add(Collections.singletonList(str));
+                            }
+                        } else {
+                            throw new IllegalArgumentException("Unsupported list element type annotation");
+                        }
+                        
+                        ListLength listLengthAnnotation = (ListLength) annotationType;
+                        List<List<Object>> allCombinations = createNestedListsOfSize(listOfLists, listLengthAnnotation.max());
+                        args.addAll(allCombinations);
+                    } else {
+                        throw new IllegalArgumentException("Unsupported list element type");
+                    }
+
+                }
+            } else if (parameter.isAnnotationPresent(ForAll.class)) {
+                ForAll forAll = parameter.getAnnotation(ForAll.class);
+                try {
+                    Method generatorMethod = method.getDeclaringClass().getMethod(forAll.name());
+                    for (int i = 0; i < forAll.times(); i++) {
+                        args.add(generatorMethod.invoke(instance));
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Error invoking generator method for @ForAll", e);
+                }
             }
-        } else if (annotation instanceof StringSet) {
-            StringSet set = (StringSet) annotation;
-            inputsList.addAll(Arrays.asList(set.strings()));
-        } else if (annotation instanceof ListLength) {
-            ListLength length = (ListLength) annotation;
-            inputsList = generateListCombinations(parameter, length.min(), length.max());
-        } else if (annotation instanceof ForAll) {
-            ForAll forAll = (ForAll) annotation;
-            inputsList = generateForAllValues(instance, forAll);
+
+            argsPerParameter.add(args);
         }
-        
-        allCombinations.add(values);
-        
-        return cartesianProduct(allCombinations);
+
+        List<List<Object>> permutations = cartesianProduct(argsPerParameter);
+    
+        return permutations.stream().limit(100).collect(Collectors.toList());
     }
 
-    private static List<Object> generateListCombinations(Parameter parameter, int min, int max) {
-        List<Object> lists = new ArrayList<>();
-        
-        return lists;
+    private static List<List<Object>> createAllListsOfSize(List<Object> elements, int size) {
+        List<List<Object>> allLists = new ArrayList<>();
+    
+        if (size == 0) {
+            allLists.add(new ArrayList<>());
+            return allLists;
+        }
+    
+        if (elements.isEmpty() || size < 0) {
+            return allLists;
+        }
+    
+        generatePermutations(allLists, elements, size, new ArrayList<>());
+    
+        return allLists;
+    }
+    
+    private static void generatePermutations(List<List<Object>> allLists, List<Object> elements, int size, List<Object> current) {
+        if (current.size() == size) {
+            allLists.add(new ArrayList<>(current));
+            return;
+        }
+    
+        for (Object element : elements) {
+            current.add(element);
+            generatePermutations(allLists, elements, size, current);
+            current.remove(current.size() - 1);
+        }
+    }
+
+    private static List<List<Object>> createNestedListsOfSize(List<List<Object>> listOfLists, int outerSize) {
+        List<List<Object>> allNestedLists = new ArrayList<>();
+    
+        if (outerSize == 0) {
+            allNestedLists.add(new ArrayList<>());
+            return allNestedLists;
+        }
+    
+        if (listOfLists.isEmpty() || outerSize < 0) {
+            return allNestedLists;
+        }
+    
+        generatePermutationsOfLists(allNestedLists, new ArrayList<>(), listOfLists, outerSize);
+    
+        return allNestedLists;
+    }
+    
+    private static void generatePermutationsOfLists(List<List<Object>> allNestedLists, List<List<Object>> currentNestedList, List<List<Object>> listOfLists, int outerSize) {
+        if (currentNestedList.size() == outerSize) {
+            allNestedLists.add(new ArrayList<>(currentNestedList));
+            return;
+        }
+    
+        for (List<Object> innerList : listOfLists) {
+            currentNestedList.add(innerList);
+            generatePermutationsOfLists(allNestedLists, currentNestedList, listOfLists, outerSize);
+            currentNestedList.remove(currentNestedList.size() - 1);
+        }
+    }
+    
+    private static List<List<Object>> cartesianProduct(List<List<Object>> lists) {
+        List<List<Object>> resultLists = new ArrayList<>();
+        if (lists.isEmpty()) {
+            resultLists.add(new ArrayList<>());
+            return resultLists;
+        } else {
+            List<Object> firstList = lists.get(0);
+            List<List<Object>> remainingLists = cartesianProduct(lists.subList(1, lists.size()));
+            for (Object condition : firstList) {
+                for (List<Object> remainingList : remainingLists) {
+                    Object[] resultList = new Object[remainingList.size() + 1];
+                    resultList[0] = condition;
+                    System.arraycopy(remainingList.toArray(), 0, resultList, 1, remainingList.size());
+                    resultLists.add(Arrays.asList(resultList));
+                }
+            }
+        }
+        return resultLists;
     }
 }
