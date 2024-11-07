@@ -1,5 +1,6 @@
 import java.lang.annotation.*;
 import java.lang.reflect.*;
+import java.security.InvalidParameterException;
 import java.util.*;
 
 public class Unit {
@@ -141,30 +142,29 @@ public class Unit {
                 Annotation[][] inputAnnotations = testMethod.getParameterAnnotations();
 
                 for (int i = 0; i < inputTypes.length; i++) {
-                    if (inputAnnotations[i].length != 1) {
-                        System.out.println("Property " + testMethod.getName() + " has argument with incorrect number of annotations");
-                        throw new RuntimeException();
-                    }
-
-                    if (inputTypes[i].equals(Integer.class) && !inputAnnotations[i][0].equals(IntRange.class)) {
-                        
-                    } else if (inputTypes[i].equals(String.class) && !inputAnnotations[i][0].equals(StringSet.class)) {
-
-                    } else if (inputTypes[i].equals(List.class) && !inputAnnotations[i][0].equals(ListLength.class)) {
-
-                    } else if (inputTypes[i].equals(Object.class)) {
-
-                    } else {
-                        System.out.println("Property " + testMethod.getName() + " has argument with unsupported type");
-                        throw new RuntimeException();
+                    if (!checkValidParameters(inputTypes[i], inputAnnotations[i], i)) {
+                        System.out.println("Property " + testMethod.getName() + " has an invalid parameter.");
                     }
                 }
 
-                try {
-                    if ()
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw new RuntimeException();
+                Parameter[] parameters = testMethod.getParameters();
+                List<List<Object>> argumentCombinations = new ArrayList<>();
+                for (int i = 0; i < parameters.length; i++) {
+                    generateArgumentCombinations(parameters[i], argumentCombinations.get(i));
+                }
+
+                /* List<List<Object>> argumentCombinations = generateArgumentCombinations(testMethod, testClass); */
+
+                for (List<Object> args : argumentCombinations) {
+                    Object[] argsArray = args.toArray();
+                    try {
+                        boolean result = (boolean) testMethod.invoke(testClass, argsArray);
+                        if (!result) {
+                            results.put(testMethod.getName(), argsArray);
+                        }
+                    } catch (Throwable t) {
+                        results.put(testMethod.getName(), argsArray);
+                    }
                 }
                 
                 results.put(testMethod.getName(), testResult);
@@ -174,18 +174,70 @@ public class Unit {
         return results;
     }
 
-    private boolean checkValidParameters(Type type, Annotation annotation) {
-        if (type.equals(Integer.class) && !annotation.annotationType().equals(IntRange.class)) {
-                        
-        } else if (type.equals(String.class) && !annotation.annotationType().equals(StringSet.class)) {
+    private static boolean checkValidParameters(Type type, Annotation[] annotations, int numAnnotation) {
+        if (type.equals(Integer.class)) {
+            if (annotations.length != 1) {
+                System.out.println("Integer argument has incorrect number of annotations");
+                throw new RuntimeException();
+            } else if (!annotations[numAnnotation].annotationType().equals(IntRange.class)) {
+                System.out.println("Integer parameter can only have @IntRage annotation.");
+                throw new InvalidParameterException();
+            } return true;
+        } else if (type.equals(String.class)) {
+            if (annotations.length != 1) {
+                System.out.println("String argument has incorrect number of annotations");
+                throw new RuntimeException();
+            } else if (!annotations[numAnnotation].annotationType().equals(StringSet.class)) {
+                System.out.println("Integer parameter can only have @StringSet annotation.");
+                throw new InvalidParameterException();
+            } return true;
+        } else if (type.equals(List.class)) {
+            if (!annotations[numAnnotation].annotationType().equals(ListLength.class)) {
+                System.out.println("List parameter can only have @ListLength annotation.");
+                throw new InvalidParameterException();
+            }
 
-        } else if (type.equals(List.class) && !annotation.annotationType().equals(ListLength.class)) {
-
-        } else if (type.equals(Object.class) && !annotation.annotationType().equals(ForAll.class)) {
-
+            ParameterizedType listType = (ParameterizedType) type.getClass().getGenericSuperclass();
+            Type componentType = listType.getActualTypeArguments()[0];
+            return checkValidParameters(componentType, annotations, numAnnotation + 1);
+        } else if (type.equals(Object.class)) {
+            if (!annotations[numAnnotation].annotationType().equals(ForAll.class)) {
+                System.out.println("Object parameter can only have @ForAll annotation.");
+                throw new InvalidParameterException();
+            }
         }
-            /* System.out.println("Property " + testMethod.getName() + " has argument with unsupported type");
-            throw new RuntimeException(); */
+
         return false;
+    }
+
+    private static List<List<Object>> generateArgumentCombinations(Parameter parameter, List<Object> inputsList) {
+        Annotation[] annotations = parameter.getAnnotations();
+        Annotation annotation = annotations[0];
+
+        if (annotation instanceof IntRange) {
+            IntRange range = (IntRange) annotation;
+            for (int i = range.min(); i <= range.max(); i++) {
+                inputsList.add(i);
+            }
+        } else if (annotation instanceof StringSet) {
+            StringSet set = (StringSet) annotation;
+            inputsList.addAll(Arrays.asList(set.strings()));
+        } else if (annotation instanceof ListLength) {
+            ListLength length = (ListLength) annotation;
+            inputsList = generateListCombinations(parameter, length.min(), length.max());
+        } else if (annotation instanceof ForAll) {
+            ForAll forAll = (ForAll) annotation;
+            inputsList = generateForAllValues(instance, forAll);
+        }
+        
+        allCombinations.add(values);
+        
+        return cartesianProduct(allCombinations);
+    }
+
+    private static List<Object> generateListCombinations(Parameter parameter, int min, int max) {
+        List<Object> lists = new ArrayList<>();
+        
+        return lists;
     }
 }
