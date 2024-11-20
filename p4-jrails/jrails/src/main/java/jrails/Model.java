@@ -1,10 +1,8 @@
 package jrails;
 
 import java.io.*;
-import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Model {
@@ -37,6 +35,7 @@ public class Model {
         }
 
         // Create new id if needed
+        // Denote if entry is new or not
         boolean newEntry = false;
         if (this.id == 0) {
             newEntry = true;
@@ -70,7 +69,7 @@ public class Model {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error while reading from database");
+            throw new RuntimeException("Error while checking for entry number " + this.id + " in database");
         }
 
         return false;
@@ -90,6 +89,7 @@ public class Model {
         } catch (Exception e) {
             throw new RuntimeException("Error while reading from databse for unique id");
         }
+
         return maxId + 1;
     }
 
@@ -97,7 +97,7 @@ public class Model {
         StringBuilder sb = new StringBuilder();
         Field[] fields = this.getClass().getDeclaredFields();
 
-        // Append id to begining 
+        // Append id to beginning 
         sb.append(this.id);
         sb.append(",");
 
@@ -106,27 +106,22 @@ public class Model {
                 try {
                     Object value = field.get(this);
                     if (value == null) {
-                        sb.append("NULL"); // Serialize null values differently.
+                        sb.append("NULL"); // Handle null values
                     } else if (value instanceof String && ((String) value).contains(",")) {
                         String stringValue = (String) value;
-                        sb.append(stringValue.replace(",", "|"));// Handle commas in strings.
+                        sb.append(stringValue.replace(",", "|")); // Handle commas in strings
                     } else {
                         sb.append(value.toString());
                     }
                     sb.append(",");
                 } catch (Exception e) {
-                    throw new RuntimeException("Couldn't access database");
+                    throw new RuntimeException("Error accessing database");
                 }
             }
         }
 
-        // Remove the last comma if there's at least one field
-        if (sb.length() > 0) {
-            sb.setLength(sb.length() - 1);
-        }
-
-        System.out.println(sb.toString());
-        System.out.println("poop");
+        // Remove trailing comma and return
+        sb.setLength(sb.length() - 1);
         return sb.toString();
     }
 
@@ -140,35 +135,29 @@ public class Model {
                 throw new RuntimeException("Error occurred while writing to the file");
             }
         } else {
-            // If it's not a new entry, replace the existing one
+            // Construct a new copy of db file with the modified entry
             StringBuilder sb = new StringBuilder();
             try (BufferedReader br = new BufferedReader(new FileReader(dbFile))) {
-                FileWriter writer = new FileWriter(dbFile, true);
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] values = line.split(",");
                     int currId = Integer.parseInt(values[0].trim());
                     if (currId == this.id) {
-                        sb.append(text);
-                        sb.append("\n");
+                        sb.append(text).append("\n");
                     } else {
-                        sb.append(line);
-                        sb.append("\n");
+                        sb.append(line).append("\n");
                     }
                 }
+            } catch (Exception e) {
+                throw new RuntimeException("Error occurred while constructing modified file");
+            }
+
+            // Overwrite db file w/ new copy
+            try (FileWriter writer = new FileWriter(dbFile)) {
                 writer.write(sb.toString());
             } catch (Exception e) {
-                throw new RuntimeException("Error occurred while writing to the file");
+                throw new RuntimeException("Error occurred while writing modified file");
             }
-        }
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(dbFile));
-            int lines = 0;
-            while (reader.readLine() != null) lines++;
-            System.out.println("Length of database: " + lines);
-            reader.close();
-        } catch (Exception e) {
-            throw new RuntimeException();
         }
     }
 
@@ -185,43 +174,37 @@ public class Model {
                 int currId = Integer.parseInt(values[0].trim());
 
                 if (currId == id) {
-                    System.out.println("Found match w/ find()");
-                    // Found the row, now materialize it
-                    T instance = c.getDeclaredConstructor().newInstance(); // Create a new instance of the class
+                    // Found match, now materialize and copy
+                    T instance = c.getDeclaredConstructor().newInstance();
                     Field[] fields = c.getFields();
-                    System.out.println("Number of fields: " + fields.length);
 
                     for (int i = 0; i < fields.length; i++) {
                         Field field = fields[i];
                         if (field.getName().equals("id")) {
-                            System.out.println("Found id field");
                             field.setInt(instance, currId);
                         }
-
+                        
                         if (field.isAnnotationPresent(Column.class)) {
-                            System.out.println("Found valid field");
                             String value = values[i + 1];
                             if (field.getType() == int.class) {
-                                System.out.println("Found int");
                                 field.setInt(instance, Integer.parseInt(value));
                             } else if (field.getType() == String.class) {
-                                System.out.println("Found str");
                                 field.set(instance, value.equals("NULL") ? null : value.replace("|", ","));
                             } else if (field.getType() == boolean.class) {
-                                System.out.println("Found bool");
                                 field.setBoolean(instance, Boolean.parseBoolean(value));
                             }
                         }
                     }
 
-                    System.out.println("Returning instance...");
-                    return instance; // Return the materialized instance
+                    return instance;
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
-        return null; // No entry with the given id found, return null
+        
+        // No entry with the given id found, return null
+        return null;
     }
 
     public static <T> List<T> all(Class<T> c) {
@@ -235,7 +218,7 @@ public class Model {
                 rows.add(find(c, currId));
             }
         } catch (Exception e) {
-            throw new RuntimeException("Error while collecting all rows of the databse");
+            throw new RuntimeException("Error while collecting all rows of databse");
         }
 
         return rows;
@@ -244,31 +227,33 @@ public class Model {
     public void destroy() {
         // Check if the model has been saved (id is not 0)
         if (this.id == 0) {
-            throw new RuntimeException("Model is not in the database (id = 0)");
+            throw new RuntimeException("Tried to destroy unsaved model");
         }
 
         // If the model exists in the database, remove it
         if (existsInDatabase()) {
-            // If it's not a new entry, replace the existing one
             StringBuilder sb = new StringBuilder();
             try (BufferedReader br = new BufferedReader(new FileReader(dbFile))) {
-                FileWriter writer = new FileWriter(dbFile, true);
                 String line;
                 while ((line = br.readLine()) != null) {
                     String[] values = line.split(",");
                     int currId = Integer.parseInt(values[0].trim());
-                    System.out.println("currID: " + currId + " thisID: " + this.id);
                     if (currId != this.id) {
                         sb.append(line);
                         sb.append("\n");
                     }
                 }
+            } catch (Exception e) {
+                throw new RuntimeException("Error occurred while parsing db file for delete()");
+            }
+
+            try (FileWriter writer = new FileWriter(dbFile)) {
                 writer.write(sb.toString());
             } catch (Exception e) {
-                throw new RuntimeException("Error occurred while writing to the file");
+                throw new RuntimeException("Error occurred while removing deleted content");
             }
         } else {
-            throw new RuntimeException("Model with id " + this.id + " does not exist in the database.");
+            throw new RuntimeException("Tried to destroy model with id " + this.id + " when none exists");
         }
     }
 
@@ -276,7 +261,7 @@ public class Model {
         try (PrintWriter writer = new PrintWriter(dbFile)) {
             // By not writing anything to the writer, the file content is cleared.
         } catch (Exception e) {
-            throw new RuntimeException("Database file not found");
+            throw new RuntimeException("Cannot reset nonexistent db file");
         }
     }
 }
