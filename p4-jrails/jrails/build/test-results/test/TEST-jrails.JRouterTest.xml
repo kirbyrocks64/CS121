@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="jrails.JRouterTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2024-11-20T05:34:27" hostname="HARRISONC" time="0.005">
+<testsuite name="jrails.JRouterTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2024-11-20T19:22:06" hostname="HARRISONC" time="0.002">
   <properties/>
-  <testcase name="addRoute" classname="jrails.JRouterTest" time="0.005"/>
+  <testcase name="addRoute" classname="jrails.JRouterTest" time="0.002"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
