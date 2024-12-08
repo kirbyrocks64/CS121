@@ -21,6 +21,13 @@ public class BoardEvent implements Event {
         return List.of(p.toString(), t.toString(), s.toString());
     }
     public void replayAndCheck(MBTA mbta) {
-        
+        if (mbta.getCurrPassTrain(p) != null) {
+            throw new RuntimeException("Passenger " + p.toString() + " is already boarded");
+        } else if (mbta.getCurrPassStation(p) != s) {
+            throw new RuntimeException("Passenger " + p.toString() + " is not at station " + s.toString() + " so cannot board");
+        } else if (mbta.getCurrTrainStation(t) != s) {
+            throw new RuntimeException("Train " + t.toString() + " is not at station " + s.toString() + " so passenger " + p.toString() + " cannot board");
+        }
+        mbta.setCurrPassTrain(p, t);
     }
 }
