@@ -68,11 +68,35 @@ public class MBTA {
                 throw new RuntimeException("Train " + train.toString() + " is not at correct starting station");
             }
         }
+
+        if (passCurrStation.size() != trips.size()) {
+            throw new RuntimeException("Number of passengers does not equal number of trips");
+        }
+
+        for (Map.Entry<Passenger, List<Station>> trip : trips.entrySet()) {
+            Passenger pass = trip.getKey();
+            Station expectedStart = trip.getValue().get(0);
+            Station actualStart = passCurrStation.get(pass);
+
+            if (!actualStart.equals(expectedStart)) {
+                throw new RuntimeException("Passenger " + pass.toString() + " is not at correct starting station");
+            }
+        }
     }
 
     // Return normally if final simulation conditions are satisfied, otherwise
     // raises an exception
     public void checkEnd() {
+        for (Map.Entry<Passenger, List<Station>> trip : trips.entrySet()) {
+            Passenger pass = trip.getKey();
+            int journeySize = trip.getValue().size();
+            Station expectedEnd = trip.getValue().get(journeySize - 1);
+            Station actualEnd = passCurrStation.get(pass);
+
+            if (passBoarded.get(pass) != null || !expectedEnd.equals(actualEnd)) {
+                throw new RuntimeException("Passenger " + pass.toString() + " is not at correct end station");
+            }
+        }
     }
 
     // reset to an empty simulation
