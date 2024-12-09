@@ -131,9 +131,10 @@ private void runPassenger(MBTA mbta, Passenger p, Log log) {
             try {
                 holdNewStation = mbta.getCurrTrainStation(mbta.getCurrPassTrain(p));
                 if (holdNewStation.equals(nextStation)) {
+                    log.passenger_deboards(p, mbta.getCurrPassTrain(p), nextStation);
                     mbta.setCurrPassTrain(p, null);
                     mbta.setCurrPassStation(p, nextStation);
-                    log.passenger_deboards(p, mbta.getCurrPassTrain(p), nextStation);
+                    break;
                 }
             } finally {
                 nextCondition.signalAll();

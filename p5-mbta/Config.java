@@ -7,11 +7,11 @@ public class Config {
 
     // Helper function for retrieving lines map
     public Map<String, List<String>> getLines() {
-        return this.lines;
+        return lines;
     }
 
     // Helper function for retrieving trips map
     public Map<String, List<String>> getTrips() {
-        return this.trips;
+        return trips;
     }
 }

@@ -99,7 +99,7 @@ public class MBTA {
             Station expectedStart = line.getValue().get(0);
             Station actualStart = trainCurrStation.get(train);
 
-            if (!actualStart.equals(expectedStart)) {
+            if (actualStart == null || !actualStart.equals(expectedStart)) {
                 throw new RuntimeException("Train " + train.toString() + " is not at correct starting station");
             }
         }
@@ -113,7 +113,7 @@ public class MBTA {
             Station expectedStart = trip.getValue().get(0);
             Station actualStart = passCurrStation.get(pass);
 
-            if (!actualStart.equals(expectedStart)) {
+            if (actualStart == null || !actualStart.equals(expectedStart)) {
                 throw new RuntimeException("Passenger " + pass.toString() + " is not at correct starting station");
             }
         }
