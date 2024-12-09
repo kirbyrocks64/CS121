@@ -1,28 +1,50 @@
 import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.lang.reflect.Field;
 import java.io.*;
 import com.google.gson.*;
 import javax.swing.border.SoftBevelBorder;
 
 public class MBTA {
-    // Train fields
+    // Sim config
     private Map<Train, List<Station>> lines;
+    private Map<Passenger, List<Station>> trips;
+
+    // Train fields
     private Map<Train, Station> trainCurrStation;
     private Map<Train, Boolean> trainForwards; // true means forward, false means backward
 
     // Passenger fields
-    private Map<Passenger, List<Station>> trips;
     private Map<Passenger, Station> passCurrStation;
     private Map<Passenger, Train> passBoarded;
+    private Map<Passenger, Boolean> passTripComplete;
+
+    // Thread fields
+    private Map<Train, Lock> trainLocks;
+    private Map<Station, Lock> stationLocks;
+    private Map<Train, Condition> trainConditions;
+    private Map<Station, Condition> stationConditions;
+
+
 
     // Creates an initially empty simulation
     public MBTA() {
         lines = new HashMap<>();
         trips = new HashMap<>();
+
         trainCurrStation = new HashMap<>();
-        passCurrStation = new HashMap<>();
         trainForwards = new HashMap<>();
+
+        passCurrStation = new HashMap<>();
         passBoarded = new HashMap<>();
+        passTripComplete = new HashMap<>();
+
+        trainLocks = new HashMap<>();
+        stationLocks = new HashMap<>();
+        trainConditions = new HashMap<>();
+        stationConditions = new HashMap<>();
     }
 
     // Adds a new transit line with given name and stations
@@ -34,8 +56,19 @@ public class MBTA {
             newStations.add(newStation);
         }
         lines.put(newTrain, newStations);
+
         trainCurrStation.put(newTrain, newStations.get(0));
         trainForwards.put(newTrain, true);
+
+        trainLocks.put(newTrain, new ReentrantLock());
+        for (Station s : newStations) {
+            stationLocks.put(s, new ReentrantLock());
+        }
+
+        trainConditions.put(newTrain, trainLocks.get(newTrain).newCondition());
+        for (Station s : newStations) {
+            stationConditions.put(s, stationLocks.get(s).newCondition());
+        }
     }
 
     // Adds a new planned journey to the simulation
@@ -47,8 +80,10 @@ public class MBTA {
             newStations.add(newStation);
         }
         trips.put(newPassenger, newStations);
+
         passCurrStation.put(newPassenger, newStations.get(0));
         passBoarded.put(newPassenger, null);
+        passTripComplete.put(newPassenger, false);
     }
 
     // Return normally if initial simulation conditions are satisfied, otherwise
@@ -103,6 +138,18 @@ public class MBTA {
     public void reset() {
         lines.clear();
         trips.clear();
+
+        trainCurrStation.clear();
+        trainForwards.clear();
+
+        passCurrStation.clear();
+        passBoarded.clear();
+        passTripComplete.clear();
+
+        trainLocks.clear();
+        stationLocks.clear();
+        trainConditions.clear();
+        stationConditions.clear();
     }
 
     // adds simulation configuration from a file
@@ -135,7 +182,7 @@ public class MBTA {
         return lines.get(train);
     }
 
-    public Map<Train, Station> getTrainCurrStations() {
+    public synchronized Map<Train, Station> getTrainCurrStations() {
         return trainCurrStation;
     }
 
@@ -143,7 +190,7 @@ public class MBTA {
         return trips.get(passenger);
     }
 
-    public Map<Passenger, Station> getPassCurrStations() {
+    public synchronized Map<Passenger, Station> getPassCurrStations() {
         return passCurrStation;
     }
 
@@ -185,6 +232,59 @@ public class MBTA {
 
     public synchronized void setCurrPassTrain(Passenger p, Train t) {
         passBoarded.put(p, t);
+    }
+
+    // Edit passenger trip completion
+    public boolean isPassTripComplete(Passenger p) {
+        return passTripComplete.get(p);
+    }
+
+    public synchronized void setPassTripComplete(Passenger p) {
+        passTripComplete.put(p, true);
+    }
+
+    public synchronized boolean allTripsComplete() {
+        for (boolean complete : passTripComplete.values()) {
+            if (!complete) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public synchronized boolean stationOccupied(Station s1) {
+        for (Station s2 : trainCurrStation.values()) {
+            if (s2.equals(s1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public synchronized Train getTrainAtStation(Station s) {
+        for (Train t : trainCurrStation.keySet()) {
+            if (trainCurrStation.get(t).equals(s)) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    // Get locks and conditions
+    public Lock getTrainLock(Train t) {
+        return trainLocks.get(t);
+    }
+
+    public Lock getStationLock(Station s) {
+        return stationLocks.get(s);
+    }
+
+    public Condition getTrainCondition(Train t) {
+        return trainConditions.get(t);
+    }
+
+    public Condition getStationCondition(Station s) {
+        return stationConditions.get(s);
     }
 }
 
