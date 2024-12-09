@@ -1,0 +1,4 @@
+One lock and condition was given to each station. Before each train moves, it takes the lock 
+of the station it's at and the next station to prevent any other entities from boarding, 
+arriving, or otherwise interfering with the current action. Passengers also lock the stations
+they board or deboard on so the train does not move while they perform their action.
